@@ -1,8 +1,10 @@
 use core::fmt;
-use std::{error::Error, sync::Arc};
+use std::sync::Arc;
 
 use crate::smart::Pluggable;
 use crate::smart::Reportable;
+
+use super::err::SmartHomeError;
 
 #[derive(Clone)]
 pub struct SmartHouse {
@@ -22,9 +24,9 @@ impl SmartHouse {
         &self.name
     }
 
-    pub fn add(&mut self, room: SmartRoom) -> Result<(), Box<dyn Error>> {
+    pub fn add(&mut self, room: SmartRoom) -> Result<(), SmartHomeError> {
         match self.get_rooms().iter().find(|&v| v.name() == room.name()) {
-            Some(_) => Err(format!("room {} already constructed", room.name()).into()),
+            Some(_) => Err(SmartHomeError::RoomAlreadyExists(room.name().to_string())),
             None => {
                 self.rooms.push(room);
 
@@ -43,7 +45,7 @@ impl SmartHouse {
     pub fn get_rooms(&self) -> &[SmartRoom] {
         &self.rooms
     }
-    pub fn create_report<T: Reportable>(&self, report: T) -> Result<String, Box<dyn Error>> {
+    pub fn create_report<T: Reportable>(&self, report: T) -> Result<String, SmartHomeError> {
         report.make(self)
     }
 }
@@ -73,9 +75,11 @@ impl SmartRoom {
             devices: Vec::default(),
         }
     }
-    pub fn plug(&mut self, device: Arc<dyn Pluggable>) -> Result<(), Box<dyn Error>> {
+    pub fn plug(&mut self, device: Arc<dyn Pluggable>) -> Result<(), SmartHomeError> {
         match &self.devices.iter().find(|&d| d.name() == device.name()) {
-            Some(_) => Err(format!("Device with name {} already pluged", device.name()).into()),
+            Some(_) => Err(SmartHomeError::DeviceAlreadyPlugged(
+                device.name().to_string(),
+            )),
             None => {
                 self.devices.push(device);
                 Ok(())
